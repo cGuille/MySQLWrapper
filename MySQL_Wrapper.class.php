@@ -30,17 +30,19 @@ class MySQL_Wrapper {
      * @return void
      */
     public function __construct($db = '', $host = 'localhost', $user = 'root', $password = '', $options = array(), $port = '3306') {
-        array_walk($options, array($this, 'setOption'));
+        foreach ($options as $option => $value) {
+            $this->setOption($option, $value);
+        }
 
         if(FALSE === $this->getOption(self::OPT_ERRMODE))
             $this->setOption(self::OPT_ERRMODE, self::ERRMODE_EXCEPTION);
 
         $this->mysql_id = @mysql_connect("$host:$port", $user, $password)
-            or $this->error('Unable to connect to the SQL server : '. lcfirst(mysql_error()), mysql_errno());
+            or $this->error('Unable to connect to the SQL server : '. mysql_error(), mysql_errno());
 
         if (!empty($db)) {
             mysql_select_db($db, $this->mysql_id)
-                or $this->error('Unable to use the specified database : '. lcfirst(mysql_error($this->mysql_id)), mysql_errno($this->mysql_id));
+                or $this->error('Unable to use the specified database : '. mysql_error($this->mysql_id), mysql_errno($this->mysql_id));
         }
 
         $this->initialize();
