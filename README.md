@@ -2,7 +2,8 @@ MySQL_Wrapper
 =============
 
 Chez certains hébergeurs gratuits (notament Free, pour ne pas le citer), nous sommes contraints d'utiliser l'API MySQL standard.
-La classe MySQL_Wrapper permet de faciliter son utilisation :
+La classe MySQL_Wrapper permet de faciliter son utilisation.
+**Si vous l'utilisez, n'hésitez pas à me tenir au courant ([@cGuille](https://twitter.com/#!/cGuille) sur Twitter)**
   - Gestion des erreurs configurable : pas besoin de "or exit(mysql_error())". Le système lance automatiquement une erreur en cas de problème. Il est possible de choisir parmi trois modes d'erreur :
     - exception (par défaut) ;
     - erreur type "fatale" ;
