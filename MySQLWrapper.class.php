@@ -351,9 +351,7 @@ class MySQLStatement {
         if (empty($this->query)) {
             $this->query = 'EXECUTE stmt'. $this->identifier .' USING ';
         }
-        if (!$dont_quote) {
-            $param = "'$param'";
-        }
+        $param = $dont_quote ? addslashes($param) : "'". addslashes($param) ."'";
         $rv = $this->mysql->query("SET @p{$this->param_index}=$param;");
         $this->query .= "@p{$this->param_index}, ";
         $this->param_index += 1;
