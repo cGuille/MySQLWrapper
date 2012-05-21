@@ -139,6 +139,27 @@ class MySQL_Wrapper {
     }
     
     /**
+     * @desc Ask MYSQL to start a transaction.
+     */
+    public function startTransaction() {
+        $this->query('START TRANSACTION;');
+    }
+    
+    /**
+     * @desc Ask MYSQL to commit the current transaction.
+     */
+    public function commit() {
+        $this->query('COMMIT;');
+    }
+    
+    /**
+     * @desc Ask MYSQL to rollback to the beginning state of the current transaction.
+     */
+    public function rollback() {
+        $this->query('ROLLBACK;');
+    }
+    
+    /**
      * @desc Returns the last error raised.
      * @return string
      */
