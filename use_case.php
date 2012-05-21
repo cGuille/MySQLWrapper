@@ -1,5 +1,5 @@
 <?php
-require_once 'MySQL_Wrapper.class.php';
+require_once 'MySQLWrapper.class.php';
 
 // Connexion :
 try {
