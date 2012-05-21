@@ -1,4 +1,4 @@
-MySQL_Wrapper
+MySQLWrapper
 =============
 
 Chez certains hébergeurs gratuits (notament Free, pour ne pas le citer), nous sommes contraints d'utiliser l'API MySQL standard.
