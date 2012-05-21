@@ -3,11 +3,9 @@
  * @desc A wrapper which uses the standard MySQL API.
  * @author Guillaume Ch. (@cGuille) <cguille.dev@gmail.com>
  */
-class MySQL_Wrapper {
+class MySQLWrapper {
     private $mysql_id;
     private $options = array();
-    private $last_query = '';
-    private $last_error = '';
     
     const OPT_ERRMODE       = 100;
     const ERRMODE_EXCEPTION = 101;
@@ -94,12 +92,11 @@ class MySQL_Wrapper {
             $query = $this->buildQuery($query, $args);
         }
 
-        $this->last_query = $query;
-        $stmt = mysql_query($this->last_query, $this->mysql_id);
+        $stmt = mysql_query($query, $this->mysql_id);
 
         if (FALSE === $stmt) {
             $res = FALSE;
-            $this->error(mysql_error($this->mysql_id), mysql_errno($this->mysql_id), $this->last_query);
+            $this->error(mysql_error($this->mysql_id), mysql_errno($this->mysql_id), $query);
         } elseif(TRUE === $stmt) {
             $res = mysql_affected_rows($this->mysql_id);
         } else {
@@ -157,22 +154,6 @@ class MySQL_Wrapper {
      */
     public function rollback() {
         $this->query('ROLLBACK;');
-    }
-    
-    /**
-     * @desc Returns the last error raised.
-     * @return string
-     */
-    public function getLastError() {
-        return $this->last_error;
-    }
-
-    /**
-     * @desc Returns the last query sent.
-     * @return string
-     */
-    public function getLastQuery() {
-        return $this->last_query;
     }
     
     /**
@@ -269,19 +250,17 @@ class MySQL_Wrapper {
         return vsprintf($query, $args);
     }
     
-    private function error($message = '', $code = 0, $query = null) {            
-        $this->last_error = $message .'[CODE='. $code .']';
-        
+    private function error($message = '', $code = 0, $query = null) {
         switch($this->getOption(self::OPT_ERRMODE)) {
             case self::ERRMODE_FATAL :
-                trigger_error($this->last_error, E_USER_ERROR);
+                trigger_error($message .'[CODE='. $code .']', E_USER_ERROR);
                 break;
             case self::ERRMODE_WARNING :
-                trigger_error($this->last_error, E_USER_WARNING);
+                trigger_error($message .'[CODE='. $code .']', E_USER_WARNING);
                 break;
             case self::ERRMODE_EXCEPTION :
             default :
-                throw new MySQLException($this->last_error, $code, $query);
+                throw new MySQLException($message, $code, $query);
                 break;
         }
     }
@@ -290,7 +269,6 @@ class MySQL_Wrapper {
         mysql_close($this->mysql_id) or $this->error(mysql_error($this->mysql_id), mysql_errno($this->mysql_id));
     }
 }
-
 
 class MySQLException extends Exception {
     private $query;
