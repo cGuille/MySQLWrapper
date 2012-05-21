@@ -6,6 +6,8 @@
 class MySQLWrapper {
     private $mysql_id;
     private $options = array();
+    private $statements = array();
+    private $index = 0;
     
     const OPT_ERRMODE       = 100;
     const ERRMODE_EXCEPTION = 101;
@@ -126,6 +128,20 @@ class MySQLWrapper {
         }
         return $res;
     }
+
+    /**
+     * @desc Ask MySQL to create a prepared statement. Use '?' markers to point out the params you will bind.
+     * @param string $query
+     * @return MySQLStatement
+     */
+    public function prepare($query) {
+        if (FALSE === $this->query("PREPARE stmt{$this->index} FROM '". addslashes($query) ."';")) {
+            return FALSE;
+        }
+        $this->statements[$this->index] = new MySQLStatement($this, $this->index, $query);
+        $this->index += 1;
+        return $this->statements[$this->index - 1];
+    }
     
     /**
      * @desc Returns the last auto-increment generated.
@@ -136,21 +152,21 @@ class MySQLWrapper {
     }
     
     /**
-     * @desc Ask MYSQL to start a transaction.
+     * @desc Ask MySQL to start a transaction.
      */
     public function startTransaction() {
         $this->query('START TRANSACTION;');
     }
     
     /**
-     * @desc Ask MYSQL to commit the current transaction.
+     * @desc Ask MySQL to commit the current transaction.
      */
     public function commit() {
         $this->query('COMMIT;');
     }
     
     /**
-     * @desc Ask MYSQL to rollback to the beginning state of the current transaction.
+     * @desc Ask MySQL to rollback to the beginning state of the current transaction.
      */
     public function rollback() {
         $this->query('ROLLBACK;');
@@ -191,6 +207,7 @@ class MySQLWrapper {
         return isset($this->options[$attr]) ? $this->options[$attr] : FALSE;
     }
 
+    // You should not use directly the following methods:
 
     private function buildQuery($query, $args) {
         for ($i=0, $m = count($args); $i < $m; $i += 1) {
@@ -249,6 +266,19 @@ class MySQLWrapper {
 
         return vsprintf($query, $args);
     }
+
+    public function removeStatement($identifier) {
+        $rv = FALSE;
+
+        if (!isset($this->statements[$identifier])) {
+            $this->error("Cannot remove non existing statement ($identifier).");
+        } else {
+            $rv = $this->query("DEALLOCATE PREPARE stmt{$identifier};");
+            unset($this->statements[$identifier]);
+        }
+
+        return $rv;
+    }
     
     private function error($message = '', $code = 0, $query = null) {
         switch($this->getOption(self::OPT_ERRMODE)) {
@@ -267,6 +297,77 @@ class MySQLWrapper {
     
     public function __destruct() {
         mysql_close($this->mysql_id) or $this->error(mysql_error($this->mysql_id), mysql_errno($this->mysql_id));
+    }
+}
+
+class MySQLStatement {
+    private $mysql;
+    private $identifier;
+    private $param_index = 0;
+    private $query;
+
+    public function __construct(MySQLWrapper $mysql, $identifier, $query) {
+        $this->mysql =& $mysql;
+        $this->identifier = $identifier;
+    }
+
+    /**
+     * @desc Bind the given params, then execute the prepared statement. 
+     *       If there are more than one param, give an array of params.
+     * @param mixed
+     * @param…
+     * @return mixed (array | int | FALSE)
+     */
+    public function execute() {
+        $values = func_get_args();
+
+        if (empty($values)) {
+            return $this->mysql->query('EXECUTE stmt'. $this->identifier .';');
+        }
+        if (empty($this->query)) {
+            $this->query = 'EXECUTE stmt'. $this->identifier .' USING ';
+        }
+        for ($stamp = $this->param_index, $nb_params = $this->param_index + count($values);
+             $this->param_index < $nb_params;
+             $this->param_index += 1) {
+                $this->mysql->query('SET @p'. $this->param_index .'=\''. addslashes($values[$this->param_index - $stamp]) .'\';');
+                $this->query .= "@p{$this->param_index}, ";
+        }
+
+        $this->param_index = 0;
+        $rv = $this->mysql->query(substr($this->query, 0, -2));
+        $this->query = '';
+
+        return $rv;
+    }
+
+    /**
+     * @desc Bind the given param to the next marker.
+     * @param mixed
+     * @param bool
+     * @return bool
+     */
+    public function bind($param, $dont_quote = FALSE) {
+        if (empty($this->query)) {
+            $this->query = 'EXECUTE stmt'. $this->identifier .' USING ';
+        }
+        if (!$dont_quote) {
+            $param = "'$param'";
+        }
+        $rv = $this->mysql->query("SET @p{$this->param_index}=$param;");
+        $this->query .= "@p{$this->param_index}, ";
+        $this->param_index += 1;
+
+        return $rv;
+    }
+
+    /**
+     * @desc Ask MySQL to delete this statement and remove the reference to this from
+     *       the MySQLWrapper owner object.
+     * @return bool (success)
+     */
+    public function delete() {
+        return $this->mysql->removeStatement($this->identifier) !== FALSE;
     }
 }
 
